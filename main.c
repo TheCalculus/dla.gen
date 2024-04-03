@@ -4,15 +4,16 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define DIMX 65
-#define DIMY 65
+#define DIMX 100
+#define DIMY 255
 
 #define ITERATIONS 100
 
 bool level[DIMX][DIMY];
 
-uint8_t x = 33, y = 33; // coordinate of initial / current pixel
-size_t  n = 0;          // number of neighbours of initial / current pixel
+uint8_t x = (DIMX + 1) / 2,
+        y = (DIMY + 1) / 2;
+size_t  n = 0;
 
 double grand() {
     return (double)random() /
@@ -32,7 +33,6 @@ void increment_and_evaluate(size_t* inc, struct cell** arr,
     (*inc)++;
 
     arr[*inc]->pointer = &(level[xx][yy]);
-    printf("arr[%zu]->pointer = %p\n", *inc, arr[*inc]->pointer);
     arr[*inc]->x = xx;
     arr[*inc]->y = yy;
 }
@@ -57,12 +57,20 @@ int main() {
 
     for (int i = 0; i < ITERATIONS; i++) {
         neighbours(arr, &n);
+
         index = (int)(1 + grand() * n);
         *(arr[index]->pointer) = true;
         x = arr[index]->x;
         y = arr[index]->y;
 
         n = 0;
+    }
+
+    for (int i = 0; i < DIMX; i++) {
+        for (int j = 0; j < DIMY; j++)
+            printf("%d", level[i][j]);
+
+        printf("\n");
     }
 
     for (int i = 0; i < DIMX * 2; i++)
