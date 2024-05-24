@@ -1,80 +1,83 @@
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#define DIMX 100
-#define DIMY 255
+#define DIMX 10
+#define DIMY 10
 
 #define ITERATIONS 100
 
-bool level[DIMX][DIMY];
+struct cell {
+    int x, y;
+    double value;
+};
 
-uint8_t x = (DIMX + 1) / 2,
-        y = (DIMY + 1) / 2;
-size_t  n = 0;
+struct cell   level[DIMX][DIMY];
+struct cell** empty_neighbours;
+size_t current_index;
+size_t still_empty;
 
 double grand() {
     return (double)random() /
            (double)RAND_MAX;
 }
 
-struct cell {
-    bool*   pointer;
-    uint8_t x, y;
-};
+bool alreadyAppended(struct cell* cell) {
+    for (int i = 0; i < current_index; i++)
+        if (empty_neighbours[i]->x == cell->x &&
+            empty_neighbours[i]->y == cell->y)
+            return true;
 
-struct cell* arr[DIMX * 2];
-
-void increment_and_evaluate(size_t* inc, struct cell** arr,
-                            uint8_t xx, uint8_t yy) {
-    if (level[xx][yy] == true) return;
-    (*inc)++;
-
-    arr[*inc]->pointer = &(level[xx][yy]);
-    arr[*inc]->x = xx;
-    arr[*inc]->y = yy;
+    return false;
 }
 
-void neighbours(struct cell* arr[4], size_t* n) {
-    if (x <= 0 || x >= DIMX ||
-        y <= 0 || y >= DIMY)
-        return;
+void appendNeighbour(struct cell* cell) {
+    if (cell->value == 0 && !alreadyAppended(cell)) {
+        empty_neighbours[current_index++] = cell;
+        still_empty++;
+    }
+}
 
-    increment_and_evaluate(n, arr, x - 1, y);
-    increment_and_evaluate(n, arr, x + 1, y);
-    increment_and_evaluate(n, arr, x, y - 1);
-    increment_and_evaluate(n, arr, x, y + 1);
+void recalculateNeighbours() {
+    struct cell* last = empty_neighbours[current_index];
+
+    appendNeighbour(&level[last->x + 1][last->y]);
+    appendNeighbour(&level[last->x - 1][last->y]);
+    appendNeighbour(&level[last->x][last->y + 1]);
+    appendNeighbour(&level[last->x][last->y - 1]);
 }
 
 int main() {
     srandom(time(NULL));
-    int index = 0;
 
-    for (int i = 0; i < DIMX * 2; i++)
-        arr[i] = malloc(sizeof(struct cell*));
+    empty_neighbours    = (struct cell**)calloc(DIMX * 2, sizeof(struct cell*));
+    empty_neighbours[0] = &level[DIMX / 2][DIMY / 2];
+
+    current_index = 0, still_empty = 0;
 
     for (int i = 0; i < ITERATIONS; i++) {
-        neighbours(arr, &n);
+        recalculateNeighbours();
+        if (still_empty == 0) continue;
 
-        index = (int)(1 + grand() * n);
-        *(arr[index]->pointer) = true;
-        x = arr[index]->x;
-        y = arr[index]->y;
+        int rand_index = (int)(grand() * still_empty);
 
-        n = 0;
+        while (empty_neighbours[rand_index] != NULL &&
+               empty_neighbours[rand_index]->value == 1)
+            rand_index++;
+
+        empty_neighbours[rand_index]->value = 1;
+        still_empty--;
     }
 
     for (int i = 0; i < DIMX; i++) {
         for (int j = 0; j < DIMY; j++)
-            printf("%d", level[i][j]);
-
+            printf("%d", (int)level[i][j].value);
         printf("\n");
     }
 
-    for (int i = 0; i < DIMX * 2; i++)
-        free(arr[i]);
+    free(empty_neighbours);
 
     return 0;
 }
+
